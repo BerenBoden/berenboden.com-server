@@ -1,6 +1,6 @@
-import User from "./User";
-import Category from "./Category";
-import Project from "./Project";
-import Article from "./Article";
+import User from "./User.js";
+import Category from "./Category.js";
+import Tag from "./Tag.js";
+import Resource from "./Resource.js";
 
-export { User, Category, Project, Article };
+export { User, Category, Tag, Resource };
