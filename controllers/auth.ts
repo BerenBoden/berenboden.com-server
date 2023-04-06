@@ -2,7 +2,6 @@ import { NextFunction, Request, Response } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { User } from "../models/index.js";
-import { validationResult } from "express-validator";
 
 export const postLogin = async (
   req: Request,
@@ -10,29 +9,25 @@ export const postLogin = async (
   next: NextFunction
 ) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-    const { username, password } = req.body;
-    const user = await User.findOne({ username, password });
-    if (!user) {
-      return res.status(400).send("Username or password is incorrect");
-    }
-    // Validate password
-    const validPassword = await bcrypt.compare(password, user.password);
-    if (!validPassword) {
-      return res.status(400).send("Username or password is incorrect");
-    }
+    const { username } = req.body;
+    const user = await User.findOne({ username });
     // Create and sign access token
-    const accessToken = jwt.sign(
+    const accessToken = jwt.sign({ id: user.id }, process.env.JWT_SECRET_KEY, {
+      expiresIn: "1m",
+    });
+    const refreshToken = jwt.sign(
       { id: user.id },
-      process.env.ACCESS_TOKEN_SECRET,
+      process.env.JWT_REFRESH_SECRET_KEY,
       {
-        expiresIn: "1m",
+        expiresIn: "5m",
       }
     );
-    res.send({ accessToken });
+    user.refreshToken = refreshToken;
+    res.setHeader(
+      "Set-Cookie",
+      `token=${accessToken}; Path=/; HttpOnly; Secure; SameSite=Strict`
+    );
+    res.send({ message: "Successfully logged in." });
   } catch (err) {
     next(err);
   }
@@ -82,17 +77,19 @@ export const postRegister = async (
 ) => {
   try {
     const { username, password, email, ipAddress } = req.body;
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
     const user = new User({
       username,
       email,
       ipAddress,
     });
-    bcrypt.hash(password, 10, function (err, hash) {
-      user.password = hash;
+    user.password = await new Promise<string>((resolve, reject) => {
+      bcrypt.hash(password, 10, function (err, hash) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(hash);
+        }
+      });
     });
     await user.save();
     res.status(201).send({ message: "User successfully created." });

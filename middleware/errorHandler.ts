@@ -1,17 +1,16 @@
 import { Request, Response, NextFunction } from "express";
 
 function errorHandler(
-  err: any,
+  error: any,
   req: Request,
   res: Response,
   next: NextFunction
 ) {
-  // Log the error details to the console
-  console.error(err.stack);
-
-  // Set the status code and send the error message to the client
-  res.status(err.status || 500).json({
-    message: err.message || "Internal Server Error",
+  const isArray = Array.isArray(error.errors);
+  res.status(error.status || 500).json({
+    error: isArray
+      ? [...error.errors]
+      : [error.errors] || "Internal Server Error",
   });
 }
 

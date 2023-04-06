@@ -1,6 +1,7 @@
 import express from "express";
 import resourceRouter from "./routes/resource.js";
 import authRouter from "./routes/auth.js";
+import analyticsRouter from "./routes/analytics.js";
 import errorHandler from "./middleware/errorHandler.js";
 import dotenv from "dotenv";
 import rateLimit from "express-rate-limit";
@@ -18,7 +19,7 @@ const limiter = rateLimit({
 dotenv.config();
 const app = express();
 connectDB();
-//Todo: Update cors when moving to production
+//Todo: Update cors origin when moving to production
 app.use(cors());
 app.use(limiter);
 app.use(helmet());
@@ -26,6 +27,7 @@ app.use(express.json({}));
 app.use(express.urlencoded({ extended: true }));
 
 const PORT = 5000 || process.env.PORT;
+app.use("/api/analytics/", analyticsRouter);
 app.use("/api/resource/", resourceRouter);
 app.use("/api/auth/", authRouter);
 app.use(errorHandler);
