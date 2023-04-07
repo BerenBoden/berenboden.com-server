@@ -1,44 +1,42 @@
-import { Request, Response } from "express";
-import { BetaAnalyticsDataClient } from "@google-analytics/data";
+import { NextFunction, Request, Response } from "express";
+import { runReport, runRealtimeReport } from "../utils/runReport.js";
+import { updateNestedObject } from "../utils/updateNestedObject.js";
 
-const propertyId = "241704526";
-export const getAnalytics = async (req: Request, res: Response) => {
+export const getAnalytics = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
-    // Using a default constructor instructs the client to use the credentials
-    // specified in GOOGLE_APPLICATION_CREDENTIALS environment variable.
-    const analyticsDataClient = new BetaAnalyticsDataClient();
+    const data = await runReport();
 
-    // Runs a simple report.
-    async function runReport() {
-      const [response] = await analyticsDataClient.runReport({
-        property: `properties/${propertyId}`,
-        dateRanges: [
-          {
-            startDate: "2020-03-31",
-            endDate: "today",
-          },
-        ],
-        dimensions: [
-          {
-            name: "country",
-          },
-        ],
-        metrics: [
-          {
-            name: "activeUsers",
-          },
-        ],
-      });
+    const analytics = {
+      countries: {},
+      cities: {},
+      browsers: {},
+      deviceCategories: {},
+    };
 
-      console.log("Report result:");
-      response.rows.forEach((row) => {
-        console.log(row.dimensionValues[0], row.metricValues[0]);
-      });
-    }
+    data.rows.forEach((row) => {
+      const country = row.dimensionValues[0].value;
+      const city = row.dimensionValues[1].value;
+      const browser = row.dimensionValues[2].value;
+      const deviceCategory = row.dimensionValues[3].value;
+      const activeUsers = parseInt(row.metricValues[0].value, 10);
 
-    runReport();
-    res.status(200).send({ message: "Done" });
+      updateNestedObject(analytics.countries, [country], activeUsers);
+      updateNestedObject(analytics.cities, [city, country], activeUsers);
+      updateNestedObject(analytics.browsers, [browser], activeUsers);
+      updateNestedObject(
+        analytics.deviceCategories,
+        [deviceCategory],
+        activeUsers
+      );
+    });
+
+    res.status(200).send({ analytics });
   } catch (error) {
-    res.status(500).send("Error fetching analytics data: " + error.message);
+    console.log(error);
+    next({ error, status: 500 });
   }
 };

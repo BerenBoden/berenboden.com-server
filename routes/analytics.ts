@@ -3,6 +3,6 @@ import { getAnalytics } from "../controllers/analytics.js";
 
 const router = express.Router();
 
-router.get("/test", getAnalytics);
+router.get("/general", getAnalytics);
 
 export default router;

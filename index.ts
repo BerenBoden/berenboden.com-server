@@ -15,12 +15,17 @@ const limiter = rateLimit({
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 });
-
-dotenv.config();
+const envFile =
+  process.env.NODE_ENV === "local" ? ".env.local" : ".env.production";
+dotenv.config({ path: envFile });
 const app = express();
 connectDB();
-//Todo: Update cors origin when moving to production
-app.use(cors());
+app.use(
+  cors({
+    origin: process.env.CLIENT_URI,
+    credentials: true,
+  })
+);
 app.use(limiter);
 app.use(helmet());
 app.use(express.json({}));

@@ -25,9 +25,12 @@ export const postLogin = async (
     user.refreshToken = refreshToken;
     res.setHeader(
       "Set-Cookie",
-      `token=${accessToken}; Path=/; HttpOnly; Secure; SameSite=Strict`
+      `token=${accessToken}; Path=/; ${
+        process.env.NODE_ENV === "production" &&
+        `HttpOnly; Secure; SameSite=Strict;`
+      }`
     );
-    res.send({ message: "Successfully logged in." });
+    res.send({ accessToken, message: "Successfully logged in." });
   } catch (err) {
     next(err);
   }
